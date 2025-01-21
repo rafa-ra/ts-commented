@@ -140,42 +140,75 @@ function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   return adjDescriptor;
 }
 
-// Component Base Class
+// Component Base Class. This class was created to centralize logic that will
+// be used in different places. It defines 2 generic elements, that will be used somewhere
+// inside that class. It means that whenever T ot U are called inside the component class,
+// they have obey the type initially defined, since generics work as placeholders for types.
+// In this case, they use type constraints, defining that both T and U need to extend the type
+// HTMLElement.
+// --
+// T and U must be defined when extending the component class, as it will be seen further on on the code
+// --
+// The abstract keyword restricts the Component class of being
+// instantiated itself. Only its children classes can be instantiated
 abstract class Component<T extends HTMLElement, U extends HTMLElement> {
+  // HTMLTemplate element, is available when the DOM lib is
+  // defined on the tsconfig.json file
   templateElement: HTMLTemplateElement;
   hostElement: T;
   element: U;
 
+  // The constructor function, defining the necessary paremeters.
+  // And the optional parameters followed by the "?"
   constructor(
     templateId: string,
     hostElementId: string,
     insertAtStart: boolean,
     newElementId?: string
   ) {
+    // Gets the template element in the DOM through the id
+    // The "!" tells TS that value will not be null
     this.templateElement = document.getElementById(
       templateId
     )! as HTMLTemplateElement;
+
+    // Gets the exact place where the template tag will be placed
+    // First use of the Generic, indicating that hostElement must obey the type
+    // of T.
     this.hostElement = document.getElementById(hostElementId)! as T;
 
+    // dom lib method that allows to import the segment of code that will be used
+    // and extract its content from it
     const importedNode = document.importNode(
       this.templateElement.content,
       true
     );
+
+    //U generic
     this.element = importedNode.firstElementChild as U;
+    // Checks the use of the optional parameter. If there is a
+    // newElementId, assigns it to the actual element being inserted
     if (newElementId) {
       this.element.id = newElementId;
     }
 
+    // Calls the attach method passing the parameter received in the constructor
     this.attach(insertAtStart);
   }
 
+  // Keyword private forbids access of this method from outside this class
+  // insertAtBeggining must be of type boolean
   private attach(insertAtBeginning: boolean) {
+    // DOM method called in an element to insert another element to it.
+    // It requires the placement as first argument and what must be inserted
     this.hostElement.insertAdjacentElement(
       insertAtBeginning ? "afterbegin" : "beforeend",
       this.element
     );
   }
 
+  // Determines that configure and render content must be defined in the
+  // children classes, with return type of void
   abstract configure(): void;
   abstract renderContent(): void;
 }
@@ -225,15 +258,29 @@ class ProjectItem
 
 // Project List Class
 class ProjectList
+  // Complying with the component class definition, ProjectList defines
+  // The types of the generics it will use, obeying the Components class
+  // generic restrictions. HTMLDivElement extends HTMLElement
   extends Component<HTMLDivElement, HTMLElement>
+  // The class implements the DragTarget Interface
   implements DragTarget
 {
+  // Defines a variable of type array of Project Classes
+  // It will ultimately be the projects of each list (active or finished)
   assignedProjects: Project[];
 
+  // Class constructor function. This parameters syntax is a syntatic sugar
+  // for immediately creating a private property called "type" with literal type value,
+  // from the parameter received
   constructor(private type: "active" | "finished") {
+    // Since this class inherists from another class, the super keyword refers
+    // to the mother's class (Component) constructor, passing the necessary parameters
     super("project-list", "app", false, `${type}-projects`);
+
+    // This is added to avoid typescript errors of not assigning anything to the variable
     this.assignedProjects = [];
 
+    // Calls both methods when the class constructor function is called
     this.configure();
     this.renderContent();
   }
@@ -265,20 +312,31 @@ class ProjectList
     );
   }
 
+
+  // Method that renders each element in the list
   renderProjects() {
+    // Gets the proper list using the type parameter received
+    // in the class constructor, casting it as HTMLULListElement
     const listEl = document.getElementById(
       `${this.type}-projects-list`
     ) as HTMLUListElement;
+    // Clean up previous elements present in that list
     listEl.innerHTML = "";
+    // Iterates on all elements in the assignedProjects Array
     for (const prjItem of this.assignedProjects) {
+      // Instantiate a new Project item for each element,
+      // passing the ul id and the element's info
       new ProjectItem(this.element.querySelector("ul")!.id, prjItem);
     }
   }
 
+  // Filters which projects should be pushed to the instance
+  // of this class
   configure() {
     this.element.addEventListener("dragover", this.dragOverHandler);
     this.element.addEventListener("dragleave", this.dragLeaveHandler);
     this.element.addEventListener("drop", this.dropHandler);
+
 
     projectState.addListener((projects: Project[]) => {
       const relevantProjects = projects.filter((prj) => {
@@ -292,9 +350,13 @@ class ProjectList
     });
   }
 
+  // Method that renders the list element
   renderContent() {
+    // Gets the type parameter in the constructor
     const listId = `${this.type}-projects-list`;
+    // Assigns the listId to the ul element in the hostElement
     this.element.querySelector("ul")!.id = listId;
+    // Assigns the following text to the h2 element in the hostElement
     this.element.querySelector("h2")!.textContent =
       this.type.toUpperCase() + " PROJECTS";
   }
