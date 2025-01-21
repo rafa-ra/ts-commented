@@ -184,7 +184,7 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
       true
     );
 
-    //U generic
+    //U generic, will for all child components be the first element of the template element
     this.element = importedNode.firstElementChild as U;
     // Checks the use of the optional parameter. If there is a
     // newElementId, assigns it to the actual element being inserted
@@ -312,7 +312,6 @@ class ProjectList
     );
   }
 
-
   // Method that renders each element in the list
   renderProjects() {
     // Gets the proper list using the type parameter received
@@ -336,7 +335,6 @@ class ProjectList
     this.element.addEventListener("dragover", this.dragOverHandler);
     this.element.addEventListener("dragleave", this.dragLeaveHandler);
     this.element.addEventListener("drop", this.dropHandler);
-
 
     projectState.addListener((projects: Project[]) => {
       const relevantProjects = projects.filter((prj) => {
@@ -363,13 +361,20 @@ class ProjectList
 }
 
 //Project Input Class
+//Extends Component class, determining that the generic elements
+//to be used inside are of types HTMLDivElement and HTMLFormElement,
+//which extend the type HTMLElement, as contrained in the Component Class
 class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
   titleInputElement: HTMLInputElement;
   descriptionInputElement: HTMLInputElement;
   peopleInputElement: HTMLInputElement;
 
   constructor() {
+    //Inside the constructor, calls super to comply with
+    //the Components constructor needs: the templateId, the hostId,
+    // the template placement and the new element Id
     super("project-input", "app", true, "user-input");
+    //Selects the inputs
     this.titleInputElement = this.element.querySelector(
       "#title"
     )! as HTMLInputElement;
@@ -379,20 +384,32 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
     this.peopleInputElement = this.element.querySelector(
       "#people"
     )! as HTMLInputElement;
+    //Calls configure
     this.configure();
   }
 
+  // Adds an event listener to the element. Element will
+  // always be the first child of the imported node/template
   configure() {
     this.element.addEventListener("submit", this.submitHandler);
   }
 
+  // The Component class requires an implementation of renderContent
+  // Since there is no utility in it here, this was declared this way
   renderContent() {}
 
+  // Private method, meaning that it can only be used inside this class
+  // Collects user inputs in the form that adds projects. It returns
+  // a tuple, in case there are user inputs or else, nothing. A tuple is an array comprised of elements
+  // of specific types.
   private gatherUserInput(): [string, string, number] | void {
+    // Gets the elements values
     const enteredTitle = this.titleInputElement.value;
     const enteredDescription = this.descriptionInputElement.value;
     const enteredPeople = this.peopleInputElement.value;
 
+    // Objects that comply with the structural contract of validatable (through the interface)
+    // to be used later in validation
     const titleValidatable: Validatable = {
       value: enteredTitle,
       required: true,
@@ -414,6 +431,8 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
       max: 999,
     };
 
+    //Calling the validate function passing each user input
+    // If validate returns false, the method only returns an alert
     if (
       !validate(titleValidatable) ||
       !validate(descriptionValidatable) ||
@@ -421,11 +440,14 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
     ) {
       alert("Invalid input, please try again!");
       return;
-    } else {
+    }
+    // If all inputs are validated, a tuple with the user inputs is returned
+    else {
       return [enteredTitle, enteredDescription, +enteredPeople];
     }
   }
 
+  // Method only accessible inside the class, that clears all inputs
   private clearInputs() {
     this.titleInputElement.value = "";
     this.descriptionInputElement.value = "";
@@ -433,13 +455,19 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
   }
 
   @autobind
+  // Callback to the form submisssion
   private submitHandler(event: Event) {
+    // Prevents the page from reloading
     event.preventDefault();
     const userInput = this.gatherUserInput();
+    // Checks if the return type is an array (in case there are no inputs, the function returns nothing)
     if (Array.isArray(userInput)) {
+      // De-structures the tuple
       const [title, description, people] = userInput;
+      // Calls the method addProject, passing the respective information
       projectState.addProject(title, description, people);
 
+      // Calls clearInputs
       this.clearInputs();
     }
   }
