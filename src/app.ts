@@ -11,11 +11,13 @@ interface DragTarget {
 }
 
 // Project Type
+// Enum, that is accessed and modified with object syntax
 enum ProjectStatus {
   Active,
   Finished,
 }
 
+// Will be used as a type
 class Project {
   constructor(
     public id: string,
@@ -27,23 +29,41 @@ class Project {
 }
 
 // Project State Management
+// Function type that specifies with a generic that
 type Listener<T> = (items: T[]) => void;
 
+// State Class that can be re-instantiated more than once
 class State<T> {
   constructor() {}
+  // Determines that the property "listeners" can be accessed only
+  // by the State Class and its instances
+  // Listeners must be an array of the same type of the generic indicated
+  // when instantiating the class (see Project State)
   protected listeners: Listener<T>[] = [];
+  // Pushes new listener function to the array
   addListener(listenerFn: Listener<T>) {
     this.listeners.push(listenerFn);
   }
 }
 
+// The ProjectState class extends the State Class
+// TS requires that the generic is declared, because
+// it was required in the parent class
 class ProjectState extends State<Project> {
+  // projects property only accessible inside this class
   private projects: any[] = [];
+  // Storing ProjectState instance in a variable ensures that this
+  // class will be a singleton
+  // Private makes sure it will only be accessed from inside this class
+  // Static allows it to be accessed directly from the class, not the instance
   private static instance: ProjectState;
+  // Private constructor
   private constructor() {
     super();
   }
 
+  // Static method that creates or gets the already
+  // created instance of the class
   static getInstance() {
     if (this.instance) {
       return this.instance;
@@ -52,6 +72,7 @@ class ProjectState extends State<Project> {
     return this.instance;
   }
 
+  // Adds projects to the projects array. States the types of each parameter
   addProject(title: string, description: string, numOfPeople: number) {
     const newProject = new Project(
       Math.random().toString(),
@@ -61,17 +82,26 @@ class ProjectState extends State<Project> {
       ProjectStatus.Active
     );
     this.projects.push(newProject);
+    // Calls updateListeners
     this.updateListeners();
   }
 
+  // Function that requires the projectId and the newStatus
   moveProject(projectId: string, newStatus: ProjectStatus) {
+    // Looks for the project being moved in the projects array
     const project = this.projects.find((prj) => prj.id === projectId);
+    // If the project has a different status in the array, change it
+    //  to the new one
     if (project && project.status !== newStatus) {
       project.status = newStatus;
+      // Calls updateListeners
       this.updateListeners();
     }
   }
 
+  // Goes through all listeners in the listeners array
+  // And pass down the projecs array, so all of the listeners
+  // are "notified" when something changes
   updateListeners() {
     for (const listenerFn of this.listeners) {
       listenerFn(this.projects.slice());
@@ -212,13 +242,18 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
   abstract configure(): void;
   abstract renderContent(): void;
 }
-
+// "Project Card in the list", extends the Component Class
+// determining that hostElement will be of type HTMLUlListElement
+// and HTMLLiElement. ProjectItem also implements the interface Draggable
 class ProjectItem
   extends Component<HTMLUListElement, HTMLLIElement>
   implements Draggable
 {
+  // Private property that can only be accessed from inside the class,
+  // of type "Project" which is a class
   private project: Project;
 
+  // Getter to alternate text depending on how much people is on it
   get persons() {
     if (this.project.people === 1) {
       return "1 person";
@@ -227,10 +262,16 @@ class ProjectItem
     }
   }
 
+  // Class constructor that receives the hostId and the project itself
   constructor(hostId: string, project: Project) {
+    // Calls Super, to access the Component's class constructor
+    // Passing down as parameters templateId, hostId, false meaning that it
+    // shouldn't be allocated in the beggining and the new element id
     super("single-project", hostId, false, project.id);
+    // Assigns the project received as a parameter to the private project variable
     this.project = project;
 
+    // Calls configure and render content
     this.configure();
     this.renderContent();
   }
@@ -245,10 +286,14 @@ class ProjectItem
     console.log("DragEnd");
   }
 
+  // Configure adds eventListeners to the first child of the template element
   configure() {
     this.element.addEventListener("dragstart", this.dragStartHandler);
     this.element.addEventListener("dragend", this.dragEndHandler);
   }
+
+  // Updates the text content of the project card based on the project received
+  // The exclamation mark tells TS that the selected element will not be null
   renderContent() {
     this.element.querySelector("h2")!.textContent = this.project.title;
     this.element.querySelector("h3")!.textContent = this.persons + " assigned.";
