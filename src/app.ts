@@ -1,10 +1,17 @@
 // Drag & Drop Interfaces
+// Interface that will be implemented by Draggable elements
 interface Draggable {
+  // Mandatory methods to be declared by objects
+  // or classes that implement this interface
   dragStartHandler(event: DragEvent): void;
   dragEndHandler(event: DragEvent): void;
 }
 
+// Interface that will be implemented by elements
+// that will have elements dragged in or out of them
 interface DragTarget {
+  // Mandatory methods to be declared in objects
+  // or classes that implement this interface
   dragOverHandler(event: DragEvent): void;
   dropHandler(event: DragEvent): void;
   dragLeaveHandler(event: DragEvent): void;
@@ -109,9 +116,12 @@ class ProjectState extends State<Project> {
   }
 }
 
+// Instantiates the ProjectState or gets the
+// the previously created instance
 const projectState = ProjectState.getInstance();
 
 // Validation
+// Interface that defines the criteria for validation
 interface Validatable {
   value: string | number;
   required?: boolean;
@@ -158,6 +168,8 @@ function validate(validatableInput: Validatable) {
 }
 
 // Autobind Decorator
+// Reusable decorator that will be applied to avoid
+// code repetition when binding elements is necessary
 function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
   const adjDescriptor: PropertyDescriptor = {
@@ -277,17 +289,30 @@ class ProjectItem
   }
 
   @autobind
+  // ProjectItem is a draggable element, therefore
+  // it implements the Draggable interface
+
+  // It receives an event as parameter, of type DragEvent
+  // which is a default browser event
   dragStartHandler(event: DragEvent): void {
+    // Data transfer is a drag event method to move data
+    // In this case, in order to enhance performance, only
+    // the project id will be stored
     event.dataTransfer!.setData("text/plain", this.project.id);
+    // effectAllowed determines the browser behaviour,
+    //  such as cursor presentation
     event.dataTransfer!.effectAllowed = "move";
   }
 
+  // Receives placeholder parameter, so far it does nothing
   dragEndHandler(_: DragEvent): void {
     console.log("DragEnd");
   }
 
   // Configure adds eventListeners to the first child of the template element
   configure() {
+    // Adds events listeners for the types specified below
+    // and call these methods
     this.element.addEventListener("dragstart", this.dragStartHandler);
     this.element.addEventListener("dragend", this.dragEndHandler);
   }
@@ -331,26 +356,39 @@ class ProjectList
   }
 
   @autobind
+  // The ProjectList is a DragTarget, therefore it
+  // implements the DragTarget interface and its methods
   dragOverHandler(event: DragEvent): void {
+    // If there is a dataTransfer object and the first type is "text/plain"
     if (event.dataTransfer && event.dataTransfer.types[0] === "text/plain") {
       //The drop event will only be triggered if the dragOver element calls
       //event.preventDefault, because the default is for JS not to allow drag and drop
       // So in this case, event prevent default is necessary
       event.preventDefault();
+      // Selects the list, which will not be null
       const listEl = this.element.querySelector("ul")!;
+      // Adds class to change list visually
+      // when object is dragged over it
       listEl.classList.add("droppable");
     }
   }
 
   @autobind
   dragLeaveHandler(_: DragEvent): void {
+    // Selects list, which will not be null
     const listEl = this.element.querySelector("ul")!;
+    // removes class that control visual changes
+    // when an object is dragged over that list
     listEl.classList.remove("droppable");
   }
 
   @autobind
   dropHandler(event: DragEvent): void {
+    // Gets data stored in the dataTransfer object
     const prjId = event.dataTransfer!.getData("text/plain");
+    // The moveProject state method receives the project id
+    // and the project status and then change the project state,
+    // automatically changing where it is rendered
     projectState.moveProject(
       prjId,
       this.type === "active" ? ProjectStatus.Active : ProjectStatus.Finished
@@ -377,9 +415,11 @@ class ProjectList
   // Filters which projects should be pushed to the instance
   // of this class
   configure() {
+    // Adds callback functions to the events listed below
     this.element.addEventListener("dragover", this.dragOverHandler);
     this.element.addEventListener("dragleave", this.dragLeaveHandler);
     this.element.addEventListener("drop", this.dropHandler);
+
 
     projectState.addListener((projects: Project[]) => {
       const relevantProjects = projects.filter((prj) => {
@@ -388,6 +428,7 @@ class ProjectList
         }
         return prj.status === ProjectStatus.Finished;
       });
+      
       this.assignedProjects = relevantProjects;
       this.renderProjects();
     });
